@@ -3,9 +3,12 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# مهم جدًا
 COPY package*.json ./
+
 RUN npm install --legacy-peer-deps
 
+# بعد install فقط
 COPY public ./public
 COPY src ./src
 
