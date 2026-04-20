@@ -6,6 +6,7 @@ RUN npm install --legacy-peer-deps
 COPY public ./public
 COPY src ./src
 ENV REACT_APP_API_URL=https://backend-production-d1ca.up.railway.appRUN
+
 npm run build
 ### Stage 2: serve with nginx
 FROM nginx:1.27-alpine
