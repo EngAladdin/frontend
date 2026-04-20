@@ -1,30 +1,40 @@
-### Stage 1: build React app
-FROM node:20-alpine AS builder
+# مرحلة البناء
+FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# مهم جدًا
+# نسخ ملفات package فقط أولاً للتخزين المؤقت
 COPY package*.json ./
 
-RUN npm install --legacy-peer-deps
+# تثبيت مع --production أولاً ثم dev dependencies
+RUN npm ci --only=production --no-audit --no-fund || \
+    npm install --production --no-audit --no-fund
 
-# بعد install فقط
-COPY public ./public
-COPY src ./src
+# نسخ باقي الملفات
+COPY . .
 
-ENV REACT_APP_API_URL=https://backend-production-d1ca.up.railway.app
+# متغيرات البيئة للبناء
 ENV CI=false
+ENV ESLINT_NO_DEV_ERRORS=true
+ENV DISABLE_ESLINT_PLUGIN=true
+ENV GENERATE_SOURCEMAP=false
+ENV NODE_OPTIONS="--max-old-space-size=2048"
 
+# بناء التطبيق
 RUN npm run build
 
-
-### Stage 2: serve with nginx
+# مرحلة الإنتاج
 FROM nginx:1.27-alpine
 
-RUN rm /etc/nginx/conf.d/default.conf
+# نسخ ملفات البناء
+COPY --from=builder /app/build /usr/share/nginx/html
+
+# نسخ إعدادات nginx
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-COPY --from=builder /app/build /usr/share/nginx/html
+# فحص الصحة
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget --quiet --tries=1 --spider http://localhost:3000/healthz || exit 1
 
 EXPOSE 3000
 
